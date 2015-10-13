@@ -207,6 +207,16 @@ int	autoscript (ulong addr);
 /* common/cmd_bootm.c */
 void	print_image_hdr (image_header_t *hdr);
 
+/* common/ath_sign_verify.c */
+#ifdef CONFIG_SECURITY_BOOT
+int ath_sign_verify(u32 k_addr, image_header_t *hdr);
+#else
+static inline int ath_sign_verify(u32 k_addr, image_header_t *hdr)
+{
+	return 0;
+}
+#endif
+
 extern ulong load_addr;		/* Default Load Address */
 
 /* common/cmd_nvedit.c */
