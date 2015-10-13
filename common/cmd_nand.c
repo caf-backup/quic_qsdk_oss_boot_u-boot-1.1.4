@@ -357,6 +357,9 @@ int do_nandboot(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
 	print_image_hdr(hdr);
 
 	cnt = (ntohl(hdr->ih_size) + sizeof (image_header_t));
+#ifdef CONFIG_SECURITY_BOOT
+	cnt += 512;
+#endif
 
 	r = nand_read(nand, offset, &cnt, (u_char *) addr);
 	if (r) {

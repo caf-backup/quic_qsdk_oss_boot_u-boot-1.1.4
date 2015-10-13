@@ -244,6 +244,9 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	}
 	SHOW_BOOT_PROGRESS (4);
 
+	if (ath_sign_verify(addr, hdr))
+		return 1;
+
 	len_ptr = (ulong *)data;
 
 #if defined(__PPC__)
