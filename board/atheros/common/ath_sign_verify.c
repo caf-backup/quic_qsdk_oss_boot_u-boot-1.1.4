@@ -37,12 +37,43 @@ struct ubi_ec_hdr {
 	u32 pad1[9];
 };
 
+static int rsa_otp_key_cmp(void)
+{
+#ifdef CONFIG_SECURITY_OTP
+	int i;
+	char *otp_key = (char *)0x81800000;
+	const char *pubkey = (const char *)CONFIG_RSA_N;
+
+	if (!ath_otp_is_locked()) {
+		ath_otp_write(pubkey, strlen(CONFIG_RSA_N));
+
+		printf("OTP is not locked, save pubkey to OTP\n");
+
+		ath_otp_lock_all();
+	}
+
+	ath_otp_read(otp_key, strlen(CONFIG_RSA_N));
+
+	for (i = 0; i < strlen(CONFIG_RSA_N); i++) {
+		if (otp_key[i] != pubkey[i]) {
+			printf("FATAL ERROR: invalid public key!\n");
+			return -1;
+		}
+	}
+#endif
+
+	return 0;
+}
+
 static int rsa_pub_key_get(rsa_context *rsa)
 {
 	rsa_init(rsa, RSA_PKCS_V15, 0);
 
 	if (!CONFIG_RSA_N || !CONFIG_RSA_E || strlen(CONFIG_RSA_N) < 256 ||
 	    !strlen(CONFIG_RSA_E))
+		return -1;
+
+	if (rsa_otp_key_cmp())
 		return -1;
 
 	mpi_read_string(&rsa->N, 16, CONFIG_RSA_N);

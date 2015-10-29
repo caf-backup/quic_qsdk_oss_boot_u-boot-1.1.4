@@ -27,6 +27,7 @@
 #define ATH_GET_EXT_3BS(addr)		((addr) % ATH_16M_FLASH_SIZE)
 #define ATH_GET_EXT_4B(addr)		((addr) >> 24)
 
+static u32 ath_device_id;
 
 /*
  * globals
@@ -67,8 +68,6 @@ static void ath_spi_exit_ext_addr(int ext)
 static void
 ath_spi_read_id(void)
 {
-	u32 rd;
-
 	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
 	ath_spi_bit_banger(ATH_SPI_CMD_RDID);
 	ath_spi_delay_8();
@@ -76,10 +75,12 @@ ath_spi_read_id(void)
 	ath_spi_delay_8();
 	ath_spi_go();
 
-	rd = ath_reg_rd(ATH_SPI_RD_STATUS);
+	ath_device_id = ath_reg_rd(ATH_SPI_RD_STATUS) & 0xffffff;
 
 	printf("Flash Manuf Id 0x%x, DeviceId0 0x%x, DeviceId1 0x%x\n",
-		(rd >> 16) & 0xff, (rd >> 8) & 0xff, (rd >> 0) & 0xff);
+			(ath_device_id >> 16) & 0xff,
+			(ath_device_id >> 8) & 0xff,
+			(ath_device_id >> 0) & 0xff);
 }
 
 
@@ -233,6 +234,9 @@ unsigned long flash_init(void)
 	ath_reg_rmw_clear(ATH_SPI_FS, 1);
 
 	ath_spi_flash_enable_cs1();
+
+	ath_otp_detect();
+
 	/*
 	 * hook into board specific code to fill flash_info
 	 */
@@ -433,4 +437,346 @@ void flash_print_info(flash_info_t *info)
 	ath_spi_flash_print_info(NULL);
 	ath_nand_flash_print_info(NULL);
 }
+#endif
+
+#ifdef CONFIG_SECURITY_OTP
+#define ATH_SPI_CMD_RD_OTP_STATUS	0x35
+#define ATH_SPI_CMD_WR_OTP_STATUS1	0x01
+#define ATH_SPI_CMD_WR_OTP_STATUS2	0x31
+#define ATH_SPI_CMD_WR_OTP		0x42
+#define ATH_SPI_CMD_ERASE_OTP		0x44
+#define ATH_SPI_CMD_RD_OTP		0x48
+
+#define OTP_LOCK_MASK			0x38
+#define ALIGN(x, a)			(((x) + (a) - 1) & ~((a) - 1))
+#define ARRAY_SIZE(x)			(sizeof(x) / sizeof((x)[0]))
+
+struct ath_otp_priv {
+	u32 device_id;
+	u16 page_size;
+	u16 page_num;
+	u32 otp_size;
+	u32 write_size;
+	int only_status1;
+};
+
+static struct ath_otp_priv ath_otp_ids[] = {
+	{ /* GD25Q41B */
+		0xc84013,
+		512,
+		3,
+		512 * 3,
+		256,
+		0,
+	},
+	{ /* W25Q40CL */
+		0xef4013,
+		256,
+		3,
+		256 * 3,
+		256,
+		1,
+	},
+	{ /* GD25Q128C */
+		0xc84018,
+		256,
+		3,
+		256 * 3,
+		256,
+		0,
+	},
+	{ /* W25Q128FV */
+		0xef4018,
+		256,
+		3,
+		256 * 3,
+		256,
+		0,
+	},
+	{ /* GD25Q256C */
+		0xc84019,
+		256,
+		3,
+		256 * 3,
+		256,
+		0,
+	},
+	{ /* W25Q256FV */
+		0xef4019,
+		256,
+		3,
+		256 * 3,
+		256,
+		0,
+	},
+	/* add new otp here */
+};
+
+static struct ath_otp_priv *ath_otp_info = NULL;
+
+void ath_otp_detect(void)
+{
+	int id;
+
+	for (id = 0; id < ARRAY_SIZE(ath_otp_ids); id++) {
+		if (ath_device_id == ath_otp_ids[id].device_id) {
+			ath_otp_info = &ath_otp_ids[id];
+			break;
+		}
+	}
+}
+
+static int ath_otp_supported(void)
+{
+	return ath_otp_info ? 1 : 0;
+}
+
+int ath_otp_is_locked(void)
+{
+	if (!ath_otp_supported())
+		return 0;
+
+	ath_reg_wr_nf(ATH_SPI_FS, 1);
+	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
+	ath_spi_bit_banger(ATH_SPI_CMD_RD_OTP_STATUS);
+	ath_spi_delay_8();
+	ath_spi_go();
+
+	return (ath_reg_rd(ATH_SPI_RD_STATUS) & OTP_LOCK_MASK);
+}
+
+static void __ath_otp_lock(u32 page)
+{
+	u8 s1, s2;
+
+	ath_reg_wr_nf(ATH_SPI_FS, 1);
+
+	if (ath_otp_info->only_status1) {
+		/* read status bits: S7-S0 */
+		ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
+		ath_spi_bit_banger(ATH_SPI_CMD_RD_STATUS);
+		ath_spi_delay_8();
+		ath_spi_go();
+
+		s1 = ath_reg_rd(ATH_SPI_RD_STATUS) & 0xFF;
+	}
+
+	/* read status bits: S15-S8 */
+	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
+	ath_spi_bit_banger(ATH_SPI_CMD_RD_OTP_STATUS);
+	ath_spi_delay_8();
+	ath_spi_go();
+
+	s2 = ath_reg_rd(ATH_SPI_RD_STATUS) & 0xFF;
+
+	ath_spi_done();
+
+	/* S11, S12, S13 */
+	s2 |= 1 << (2 + page);
+
+	ath_spi_write_enable();
+	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
+
+	if (ath_otp_info->only_status1) {
+		ath_spi_bit_banger(ATH_SPI_CMD_WR_OTP_STATUS1);
+		ath_spi_bit_banger(s1);
+		ath_spi_bit_banger(s2);
+	} else {
+		ath_spi_bit_banger(ATH_SPI_CMD_WR_OTP_STATUS2);
+		ath_spi_bit_banger(s2);
+	}
+
+	ath_spi_go();
+	ath_spi_poll();
+	ath_spi_done();
+}
+
+void ath_otp_lock_all(void)
+{
+	int page;
+
+	if (!ath_otp_supported())
+		return;
+
+	for (page = 0; page < ath_otp_info->page_num; page++)
+		__ath_otp_lock(page + 1);
+}
+
+void ath_otp_lock_page(u32 page)
+{
+	if (!page || !ath_otp_supported() ||
+	    page > ath_otp_info->page_num)
+		return;
+
+	__ath_otp_lock(page);
+}
+
+static void __ath_otp_erase(u32 id)
+{
+	u32 addr = id << 12;
+
+	ath_spi_write_enable();
+	ath_spi_bit_banger(ATH_SPI_CMD_ERASE_OTP);
+	ath_spi_send_addr(addr);
+	ath_spi_go();
+	ath_spi_poll();
+
+	ath_spi_done();
+}
+
+static void ath_otp_erase(void)
+{
+	int i;
+
+	for (i = 0; i < ath_otp_info->page_num; i++)
+		__ath_otp_erase(i + 1);
+}
+
+static u32 ath_otp_read_words(u32 addr)
+{
+	ath_reg_rmw_set(ATH_SPI_FS, 1);
+	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
+	ath_spi_bit_banger(ATH_SPI_CMD_RD_OTP);
+	ath_spi_send_addr(addr);
+	ath_spi_bit_banger(0x00); /* dummy */
+
+	ath_spi_delay_8();
+	ath_spi_delay_8();
+	ath_spi_delay_8();
+	ath_spi_delay_8();
+
+	ath_spi_go();
+
+	u32 ret = ath_reg_rd(ATH_SPI_RD_STATUS);
+
+	ath_spi_done();
+
+	return ret;
+}
+
+static int ath_otp_read_page(u32 page, u8 *buf, u32 buflen)
+{
+	u32 addr, i, words;
+	u32 *data = (u32 *)buf;
+
+	if (!page || !buf || !buflen ||
+	    page > ath_otp_info->page_num)
+		return - 1;
+
+	buflen = ALIGN(buflen, sizeof(u32));
+	words = buflen >> 2;
+
+	for (i = 0; i < words; i++) {
+		addr = (page << 12) | (i << 2);
+		*(data + i) = ath_otp_read_words(addr);
+	}
+
+	return 0;
+}
+
+/* read whole otp area, buflen > otp_page_size * 3 */
+int ath_otp_read(u8 *buf, u32 buflen)
+{
+	u32 i, pages, align_offset;
+	u32 page_size, otp_size;
+
+	if (!buf || !buflen || !ath_otp_supported())
+		return -1;
+
+	page_size = ath_otp_info->page_size;
+	otp_size = ath_otp_info->otp_size;
+
+	if (buflen > otp_size)
+		return -1;
+
+	align_offset = buflen % page_size;
+	pages = buflen / page_size;
+
+	if (align_offset)
+		pages += 1;
+
+	for (i = 0; i < pages; i++) {
+		u32 r_bytes;
+		u8 *dbuf = buf + page_size * i;
+
+		if (align_offset && (i == pages - 1))
+			r_bytes = align_offset;
+		else
+			r_bytes = page_size;
+
+		ath_otp_read_page(i + 1, dbuf, r_bytes);
+	}
+
+	return 0;
+}
+
+static void ath_otp_write_page(u32 page, u32 saddr, u8 *data, u32 datalen)
+{
+	u32 j;
+
+	if (!page || page > ath_otp_info->page_num)
+		return;
+
+	ath_spi_write_enable();
+	ath_spi_bit_banger(ATH_SPI_CMD_WR_OTP);
+	ath_spi_send_addr((page << 12) | saddr);
+
+	for (j = 0; j < datalen; j++)
+		ath_spi_bit_banger(*(data + j));
+
+	ath_spi_go();
+	ath_spi_poll();
+	ath_spi_done();
+}
+
+/* write the data to whole otp area, the data length is page_size * 3 */
+int ath_otp_write(u8 *data, u32 datalen)
+{
+	u32 i, pages, align_offset;
+	u32 page_size, otp_size, write_size;
+
+	if (!data || !datalen || !ath_otp_supported())
+		return -1;
+
+	page_size = ath_otp_info->page_size;
+	otp_size = ath_otp_info->otp_size;
+	write_size = ath_otp_info->write_size;
+
+	if (datalen > otp_size)
+		return -1;
+
+	align_offset = datalen % page_size;
+	pages = datalen / page_size;
+
+	if (align_offset)
+		pages += 1;
+
+	/* return if one of the otp page is locked*/
+	if (ath_otp_is_locked())
+		return -1;
+
+	/* erase all pages */
+	ath_otp_erase();
+
+	for (i = 0; i < pages; i++) {
+		u32 w_bytes;
+		u8 *wd = data + page_size * i;
+
+		if (align_offset && (i == pages - 1))
+			w_bytes = align_offset;
+		else
+			w_bytes = page_size;
+
+		if (w_bytes <= write_size) {
+			ath_otp_write_page(i + 1, 0, wd, w_bytes);
+		} else {
+			ath_otp_write_page(i + 1, 0, wd, write_size);
+			ath_otp_write_page(i + 1, write_size, wd + write_size,
+					   w_bytes - write_size);
+		}
+	}
+
+	return 0;
+}
+
 #endif
