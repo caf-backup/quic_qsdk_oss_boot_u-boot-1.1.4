@@ -2084,6 +2084,9 @@ ifeq ($(SECURITY_BOOT), 1)
 	@echo "#define CONFIG_SECURITY_BOOT 1" >>include/config.h
 	@cat "$(RSA_HOST_DIR)/rsa_pub_c.txt" >>include/config.h
 	@cp -R $(POLARSSL_MINI_DIR) board/atheros/common
+ifeq ($(SECURITY_OTP), 1)
+	@echo "#define CONFIG_SECURITY_OTP 1" >>include/config.h
+endif
 endif
 	@./mkconfig -a board953x mips mips board953x atheros
 

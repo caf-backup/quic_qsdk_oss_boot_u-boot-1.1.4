@@ -54,4 +54,15 @@
 
 extern unsigned long flash_get_geom (flash_info_t *flash_info);
 
+#ifdef CONFIG_SECURITY_OTP
+void ath_otp_detect(void);
+int ath_otp_is_locked(void);
+void ath_otp_lock_page(u32 page);
+void ath_otp_lock_all(void);
+int ath_otp_read(u8 *buf, u32 buflen);
+int ath_otp_write(u8 *data, u32 datalen);
+#else
+#define ath_otp_detect(...)
+#endif
+
 #endif /* _ATH_FLASH_H */
