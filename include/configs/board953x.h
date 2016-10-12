@@ -176,13 +176,13 @@
 #	else //dual flash
 #		ifdef ATH_SPI_NAND
 #			if CONFIG_ATH_DUAL_IMAGE_SUPPORT
-#                               define MTDPARTS_DEFAULT "mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),128k(reserved),64k(art);spi0.1:2m(kernel),20m(rootfs),2m(k-2),20m(r-2),84m(user),22m@0x0(firmware),22m@0x1600000(fw-2)"
+#                               define MTDPARTS_DEFAULT "mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),128k(reserved),64k(art);spi0.1:2m(kernel),36m(rootfs),2m(k-2),36m(r-2),52m(user),38m@0x0(firmware),38m@0x1600000(fw-2)"
 #				define ATH_UBI_ARGS	" ubi.mtd=5,2048 root=/dev/mtdblock11 "
 #                       else
-#				define MTDPARTS_DEFAULT "mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),128k(reserved),64k(art);spi0.1:2m(kernel),20m(rootfs),106m(data),22m@0x0(firmware)"
+#				define MTDPARTS_DEFAULT "mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),128k(reserved),64k(art);spi0.1:2m(kernel),36m(rootfs),90m(data),38m@0x0(firmware)"
 #				define ATH_UBI_ARGS	" ubi.mtd=5,2048 root=/dev/mtdblock8 "
 #			endif
-#			define ATH_F_LEN        0x1400000
+#			define ATH_F_LEN        0x2400000
 #			define ATH_F_ADDR       0x200000
 #			define ATH_K_ADDR       0x0
 #			define ATH_K_LEN        0x200000
