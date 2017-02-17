@@ -895,6 +895,22 @@ static struct nand_ecclayout ath_spi_nand_oob_128_gd = {
         .oobfree        = { { 16, 48 } },
 };
 
+static struct nand_ecclayout ath_spi_nand_oob_128_gd_b = {
+        .eccbytes       = 64,
+        .eccpos         = { 64, 65, 66, 67, 68, 69, 70, 71,
+                            72, 73, 74, 75, 76, 77, 78, 79,
+                            80, 81, 82, 83, 84, 85, 86, 87,
+                            88, 89, 90, 91, 92, 93, 94, 95,
+                            96, 97, 98, 99, 100, 101, 102, 103,
+                            104, 105, 106, 107, 108, 109, 110, 111,
+                            112, 113, 114, 115, 116, 117, 118, 119,
+                            120, 121, 122, 123, 124, 125, 126, 127},
+
+        /* Not including spare regions that are not ECC-ed */
+        .oobavail       = 48,
+        .oobfree        = { {4, 12}, {20, 12}, {36, 12}, {52, 12}},
+};
+
 /* ECC parity code stored in the additional hidden spare area */
 static struct nand_ecclayout ath_spi_nand_oob_64_mx = {
 	.eccbytes	= 0,
@@ -1258,9 +1274,25 @@ static uint8_t ath_spi_nand_eccsr_common(uint8_t status)
  *      110             bit errors(=8) corrected
  *      111             uncorrectable
  */
-static uint8_t ath_spi_nand_eccsr_gd(uint8_t status)
+static uint8_t ath_spi_nand_eccsr_gd_c(uint8_t status)
 {
 	return status >> 4 & 0x7;
+}
+
+/*
+ *      ECCSR[3:0]      ECC Status
+ *      -------------------------------------------
+ *      0000             no bit errors were detected
+ *      0100             bit errors(<=4) corrected
+ *      0101             bit errors(=5) corrected
+ *      0110             bit errors(=6) corrected
+ *      0111             bit errors(=7) corrected
+ *      1000             bit errors greater than ECC capability and not corrected
+ *      1100             bit errors reach ECC capability(8 bytes) and corrected
+ */
+static uint8_t ath_spi_nand_eccsr_gd_b(uint8_t status)
+{
+	return status >> 4 & 0xf;
 }
 
 static void ath_spi_read_rdm_addr_commom(int start)
@@ -1410,16 +1442,30 @@ static struct ath_spi_nand_priv ath_spi_nand_ids[] = {
 		(128 << 20),			/* 1G bit */
 		64,				/* oob size */
 	},
-	{ /* Giga Device version 2 - GD5F1GQ4XC */
+	{ /* Giga Device version c - GD5F1GQ4XC */
 		0xc8,				/* manufacturer code */
 		{ 0xa1, 0xb1, 0x00, 0x00 },	/* Device id */
 		0x07,				/* ecc error code */
 		(128 << 20),			/* 1G bit */
 		128,				/* oob size */
 	},
-	{ /* Giga Device version 2 - GD5F2GQ4XC */
+	{ /* Giga Device version c - GD5F2GQ4XC */
 		0xc8,				/* manufacturer code */
 		{ 0xa2, 0xb2, 0x00, 0x00 },	/* Device id */
+		0x07,				/* ecc error code */
+		(256 << 20),			/* 2G bit */
+		128,				/* oob size */
+	},
+	{ /* Giga Device version b - GD5F1GQ4XB */
+		0xc8,				/* manufacturer code */
+		{ 0xc1, 0xd1, 0x00, 0x00 },	/* Device id */
+		0x07,				/* ecc error code */
+		(128 << 20),			/* 1G bit */
+		128,				/* oob size */
+	},
+	{ /* Giga Device version b - GD5F2GQ4XB */
+		0xc8,				/* manufacturer code */
+		{ 0xc2, 0xd2, 0x00, 0x00 },	/* Device id */
 		0x07,				/* ecc error code */
 		(256 << 20),			/* 2G bit */
 		128,				/* oob size */
@@ -1495,9 +1541,17 @@ done:
 			priv->ecc_layout = &ath_spi_nand_oob_64_gd;
 			priv->ecc_status = ath_spi_nand_eccsr_common;
 			priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
-		} else {
+		}
+		else if ((priv->did[0] == 0xc1) || (priv->did[1] == 0xd1)
+				|| (priv->did[0] == 0xc2) || (priv->did[0] == 0xd2))
+		{
+			priv->ecc_layout = &ath_spi_nand_oob_128_gd_b;
+			priv->ecc_status = ath_spi_nand_eccsr_gd_b;
+			priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
+		}
+		else {
 			priv->ecc_layout = &ath_spi_nand_oob_128_gd;
-			priv->ecc_status = ath_spi_nand_eccsr_gd;
+			priv->ecc_status = ath_spi_nand_eccsr_gd_c;
 			priv->read_rdm_addr = ath_spi_read_rdm_addr_gd;
 		}
 		priv->program_load = ath_spi_program_load_gd;
