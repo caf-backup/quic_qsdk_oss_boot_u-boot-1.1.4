@@ -1435,7 +1435,7 @@ static void ath_spi_nand_cmd_program_execute_win(loff_t page)
 }
 
 static struct ath_spi_nand_priv ath_spi_nand_ids[] = {
-	{ /* Giga Device version 1 - GD5F1GQ4UAYIG */
+	{ /* Giga Device version a - GD5F1GQ4UAYIG */
 		0xc8,				/* manufacturer code */
 		{ 0xf1, 0x00, 0x00, 0x00 },	/* Device id */
 		0x02,				/* ecc error code */
@@ -1484,12 +1484,19 @@ static struct ath_spi_nand_priv ath_spi_nand_ids[] = {
 		(256 << 20),			/* 2G bit */
 		64,				/* oob size */
 	},
-	{ /* Winbond -  W25N01GV */
+	{ /* Winbond - W25N01GV */
 		0xef,				/* manufacturer code */
 		{ 0xaa, 0x21, 0x00, 0x00 },	/* Device id */
 		0x02,				/* ecc error code */
 		(128 << 20),			/* 1G bit */
 		64,				/* oob size */
+	},
+	{ /* Fudan - FM25G01B */
+		0xa1,				/* manufacturer code */
+		{ 0xd1, 0x00, 0x00, 0x00 },	/* Device id */
+		0x07,				/* ecc error code */
+		(128 << 20),			/* 1G bit */
+		128,				/* oob size */
 	},
 	/* add new manufacturer here */
 };
@@ -1567,6 +1574,15 @@ done:
 		priv->erase_block = ath_spi_nand_block_erase_win;
 		priv->page_read_to_cache = ath_spi_nand_cmd_page_read_to_cache_win;
 		priv->program_execute = ath_spi_nand_cmd_program_execute_win;
+		break;
+	case 0xa1:
+		priv->ecc_layout = &ath_spi_nand_oob_128_gd;
+		priv->ecc_status = ath_spi_nand_eccsr_gd_c;
+		priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
+		priv->program_load = ath_spi_program_load_gd;
+		priv->erase_block = ath_spi_nand_block_erase_common;
+		priv->page_read_to_cache = ath_spi_nand_cmd_page_read_to_cache_common;
+		priv->program_execute = ath_spi_nand_cmd_program_execute_common;
 		break;
 	default:
 		return NULL;
