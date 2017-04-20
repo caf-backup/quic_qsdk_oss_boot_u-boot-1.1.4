@@ -930,6 +930,16 @@ static struct nand_ecclayout ath_spi_nand_oob_64_win = {
 	.oobfree	= { { 4, 4 }, { 20, 4 }, { 36, 4 }, { 52, 4 } },
 };
 
+static struct nand_ecclayout ath_spi_nand_oob_64_esmt = {
+	.eccbytes	= 28,
+	.eccpos		= { 1, 2, 3, 4, 5, 6, 7,
+			    17, 18, 19, 20, 21, 22, 23,
+			    33, 34, 35, 36, 37, 38, 39,
+			    49, 50, 51, 52, 53, 54, 55},
+	.oobavail	= 32,
+	.oobfree	= { { 8, 8 }, { 24, 8 }, { 40, 8 }, { 56, 8 } },
+};
+
 static int
 ath_spi_nand_oob_page_read(struct mtd_info *mtd, loff_t off,
 				struct mtd_oob_ops *ops)
@@ -1359,7 +1369,7 @@ static int ath_spi_program_load_common(struct mtd_info *mtd, uint8_t *buf, int l
 	return 0;
 }
 
-static int ath_spi_program_load_wb(struct mtd_info *mtd, uint8_t *buf, int len, uint8_t *oob)
+static int ath_spi_program_load_win(struct mtd_info *mtd, uint8_t *buf, int len, uint8_t *oob)
 {
 	int byte;
 	uint8_t sum = 0xff;
@@ -1498,6 +1508,13 @@ static struct ath_spi_nand_priv ath_spi_nand_ids[] = {
 		(128 << 20),			/* 1G bit */
 		128,				/* oob size */
 	},
+	{ /* ESMT - F50L1G41A */
+		0xc8,				/* manufacturer code */
+		{ 0x21, 0x00, 0x00, 0x00 },	/* Device id */
+		0x02,				/* ecc error code */
+		(128 << 20),			/* 1G bit */
+		64,				/* oob size */
+	},
 	/* add new manufacturer here */
 };
 
@@ -1544,33 +1561,48 @@ done:
 		priv->program_execute = ath_spi_nand_cmd_program_execute_common;
 		break;
 	case 0xc8:
-		if (priv->did[0] == 0xf1) {
-			priv->ecc_layout = &ath_spi_nand_oob_64_gd;
+		if (priv->did[0] != 0x21) {
+			/* GD */
+			switch (priv->did[0]) {
+			case 0xf1:
+				priv->ecc_layout = &ath_spi_nand_oob_64_gd;
+				priv->ecc_status = ath_spi_nand_eccsr_common;
+				priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
+				break;
+			case 0xc1:
+			case 0xc2:
+			case 0xd1:
+			case 0xd2:
+				priv->ecc_layout = &ath_spi_nand_oob_128_gd_b;
+				priv->ecc_status = ath_spi_nand_eccsr_gd_b;
+				priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
+				break;
+			default:
+				priv->ecc_layout = &ath_spi_nand_oob_128_gd;
+				priv->ecc_status = ath_spi_nand_eccsr_gd_c;
+				priv->read_rdm_addr = ath_spi_read_rdm_addr_gd;
+			}
+
+			priv->program_load = ath_spi_program_load_gd;
+			priv->erase_block = ath_spi_nand_block_erase_common;
+			priv->page_read_to_cache = ath_spi_nand_cmd_page_read_to_cache_common;
+			priv->program_execute = ath_spi_nand_cmd_program_execute_common;
+		} else {
+			/* ESMT */
+			priv->ecc_layout = &ath_spi_nand_oob_64_esmt;
 			priv->ecc_status = ath_spi_nand_eccsr_common;
 			priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
+			priv->program_load = ath_spi_program_load_win;
+			priv->erase_block = ath_spi_nand_block_erase_win;
+			priv->page_read_to_cache = ath_spi_nand_cmd_page_read_to_cache_win;
+			priv->program_execute = ath_spi_nand_cmd_program_execute_win;
 		}
-		else if ((priv->did[0] == 0xc1) || (priv->did[1] == 0xd1)
-				|| (priv->did[0] == 0xc2) || (priv->did[0] == 0xd2))
-		{
-			priv->ecc_layout = &ath_spi_nand_oob_128_gd_b;
-			priv->ecc_status = ath_spi_nand_eccsr_gd_b;
-			priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
-		}
-		else {
-			priv->ecc_layout = &ath_spi_nand_oob_128_gd;
-			priv->ecc_status = ath_spi_nand_eccsr_gd_c;
-			priv->read_rdm_addr = ath_spi_read_rdm_addr_gd;
-		}
-		priv->program_load = ath_spi_program_load_gd;
-		priv->erase_block = ath_spi_nand_block_erase_common;
-		priv->page_read_to_cache = ath_spi_nand_cmd_page_read_to_cache_common;
-		priv->program_execute = ath_spi_nand_cmd_program_execute_common;
 		break;
 	case 0xef:
 		priv->ecc_layout = &ath_spi_nand_oob_64_win;
 		priv->ecc_status = ath_spi_nand_eccsr_common;
 		priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
-		priv->program_load = ath_spi_program_load_wb;
+		priv->program_load = ath_spi_program_load_win;
 		priv->erase_block = ath_spi_nand_block_erase_win;
 		priv->page_read_to_cache = ath_spi_nand_cmd_page_read_to_cache_win;
 		priv->program_execute = ath_spi_nand_cmd_program_execute_win;
