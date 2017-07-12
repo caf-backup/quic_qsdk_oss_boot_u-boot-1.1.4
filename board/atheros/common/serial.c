@@ -30,6 +30,8 @@ int serial_init(void)
 	val = ath_reg_rd(GPIO_OE_ADDRESS) & (~0xcbf410u);
 #elif defined(CONFIG_MACH_QCA956x)
 	val = ath_reg_rd(GPIO_OE_ADDRESS) & 0xbbfdf6;
+#elif defined(CONFIG_MACH_QCA953x)
+	val = ath_reg_rd(GPIO_OE_ADDRESS) & (~0x410u);
 #else
 	val = ath_reg_rd(GPIO_OE_ADDRESS) & (~0xcffc10u);
 #endif
