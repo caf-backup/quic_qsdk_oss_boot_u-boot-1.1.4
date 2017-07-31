@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013,2017 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -259,13 +259,15 @@ flash_erase(flash_info_t *info, int s_first, int s_last)
 	printf("\nFirst %#x last %#x sector size %#x\n",
 		s_first, s_last, sector_size);
 
-	addr = s_first * sector_size;
-	if (addr >= ATH_16M_FLASH_SIZE) {
-		ext = 1;
-		ath_spi_enter_ext_addr(ATH_GET_EXT_4B(addr));
-	} else if (s_last * sector_size >= ATH_16M_FLASH_SIZE) {
-		printf("Erase failed, cross 16M is forbidden\n");
-		return -1;
+	if (info->size > ATH_16M_FLASH_SIZE) {
+		addr = s_first * sector_size;
+		if (addr >= ATH_16M_FLASH_SIZE) {
+			ext = 1;
+			ath_spi_enter_ext_addr(ATH_GET_EXT_4B(addr));
+		} else if (s_last * sector_size > ATH_16M_FLASH_SIZE) {
+			printf("Erase failed, cross 16M is forbidden\n");
+			return -1;
+		}
 	}
 
 	for (i = s_first; i <= s_last; i++) {
@@ -278,7 +280,9 @@ flash_erase(flash_info_t *info, int s_first, int s_last)
 		ath_spi_sector_erase(addr);
 	}
 
-	ath_spi_exit_ext_addr(ext);
+	if (info->size > ATH_16M_FLASH_SIZE) {
+		ath_spi_exit_ext_addr(ext);
+	}
 
 	ath_spi_done();
 	printf("\n");
@@ -345,13 +349,15 @@ write_buff(flash_info_t *info, uchar *source, ulong addr, ulong len)
 	printf("write addr: %x\n", addr);
 	addr = addr - CFG_FLASH_BASE;
 
-	if (addr >= ATH_16M_FLASH_SIZE) {
-		ext = 1;
-		ath_spi_enter_ext_addr(ATH_GET_EXT_4B(addr));
-		addr = ATH_GET_EXT_3BS(addr);
-	} else if (addr + len >= ATH_16M_FLASH_SIZE) {
-		printf("Write failed, cross 16M is forbidden\n");
-		return -1;
+	if (info->size > ATH_16M_FLASH_SIZE) {
+		if (addr >= ATH_16M_FLASH_SIZE) {
+			ext = 1;
+			ath_spi_enter_ext_addr(ATH_GET_EXT_4B(addr));
+			addr = ATH_GET_EXT_3BS(addr);
+		} else if (addr + len > ATH_16M_FLASH_SIZE) {
+			printf("Write failed, cross 16M is forbidden\n");
+			return -1;
+		}
 	}
 
 	while (total < len) {
@@ -366,7 +372,9 @@ write_buff(flash_info_t *info, uchar *source, ulong addr, ulong len)
 		total += len_this_lp;
 	}
 
-	ath_spi_exit_ext_addr(ext);
+	if (info->size > ATH_16M_FLASH_SIZE) {
+		ath_spi_exit_ext_addr(ext);
+	}
 
 	ath_spi_done();
 
