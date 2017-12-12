@@ -2080,13 +2080,18 @@ endif
 ifdef ATH_SPI_CS1_GPIO
 	@echo "#define CONFIG_ATH_SPI_CS1_GPIO $(ATH_SPI_CS1_GPIO)" >>include/config.h
 endif
+ifneq ($(findstring $(SECURITY_BOOT)$(UBOOT_PASSWORD), 1),)
+	@cp -R $(POLARSSL_MINI_DIR) board/atheros/common
+endif
 ifeq ($(SECURITY_BOOT), 1)
 	@echo "#define CONFIG_SECURITY_BOOT 1" >>include/config.h
 	@cat "$(RSA_HOST_DIR)/rsa_pub_c.txt" >>include/config.h
-	@cp -R $(POLARSSL_MINI_DIR) board/atheros/common
 ifeq ($(SECURITY_OTP), 1)
 	@echo "#define CONFIG_SECURITY_OTP 1" >>include/config.h
 endif
+endif
+ifeq ($(UBOOT_PASSWORD), 1)
+	@echo "#define CONFIG_UBOOT_PASSWORD 1" >>include/config.h
 endif
 	@./mkconfig -a board953x mips mips board953x atheros
 

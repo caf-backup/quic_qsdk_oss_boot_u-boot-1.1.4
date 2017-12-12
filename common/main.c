@@ -36,6 +36,31 @@
 
 #include <post.h>
 
+#ifdef CONFIG_UBOOT_PASSWORD
+#include "polarssl-mini/sha256.h"
+#include "polarssl-mini/rsa.h"
+/*
+ * How to make the uboot password's sha256 hash value?
+ * Ubuntu: echo -n cleartext | sha256sum
+ *
+ * For example: the password is "t-span" and the salt is "salt".
+ * Append the salt to the password to generate the cleartext.
+ * and then make the sha256 hash value as below.
+ *
+ * echo -n t-spansalt | sha256sum
+ *
+ * Note: Must simultaneously modify the MACROs "CONFIG_UBOOT_PASSWORD_SHA256SUM"
+ * and "CONFIG_UBOOT_PASSWORD_SALT". Otherwise the device will be bricked.
+ */
+#ifndef CONFIG_UBOOT_PASSWORD_SHA256SUM
+#define CONFIG_UBOOT_PASSWORD_SHA256SUM "3f7e37cb43e0c6644a7916ef49c3cb67cddf2a384b9b69948b81af5e5b51c43c" /* cleartext: t-spansalt */
+#endif
+#ifndef CONFIG_UBOOT_PASSWORD_SALT
+#define CONFIG_UBOOT_PASSWORD_SALT "salt"
+#endif
+#define UBOOT_PWD_SIZE_MAX 256
+#endif
+
 #ifdef CONFIG_SILENT_CONSOLE
 DECLARE_GLOBAL_DATA_PTR;
 #endif
@@ -294,6 +319,10 @@ static __inline__ int abortboot(int bootdelay)
 
 void main_loop (void)
 {
+#ifdef CONFIG_UBOOT_PASSWORD
+	int retries = 0;
+#endif
+
 #ifndef CFG_HUSH_PARSER
 	static char lastcommand[CFG_CBSIZE] = { 0, };
 	int len;
@@ -457,6 +486,13 @@ void main_loop (void)
 	{
 	    extern void video_banner(void);
 	    video_banner();
+	}
+#endif
+
+#ifdef CONFIG_UBOOT_PASSWORD
+	while (uboot_password_verify() != 0) {
+		if (++retries > 4)
+			run_command("boot", 0);
 	}
 #endif
 
@@ -645,6 +681,104 @@ int readline (const char *const prompt)
 		}
 	}
 }
+
+#ifdef CONFIG_UBOOT_PASSWORD
+/****************************************************************************/
+
+/*
+ * Prompt for input and read a password.
+ * Return:	number of read characters
+ *		-1 if break
+ */
+int readpassword (char* password_buffer, int buf_len)
+{
+	char   *p = password_buffer;
+	int	n = 0;				/* buffer index */
+	int	plen = 0;			/* prompt length */
+	int	col;				/* output column cnt */
+	char	c;
+
+	col = plen;
+
+	for (;;) {
+		c = getc();
+
+		switch (c) {
+		case '\r':				/* Enter */
+		case '\n':
+			*p = '\0';
+			puts ("\r\n");
+			return (p - password_buffer);
+
+		case 0x03:				/* ^C - break */
+			password_buffer[0] = '\0';	/* discard input */
+			return (-1);
+
+		case 0x08:				/* ^H  - backspace */
+		case 0x7F:				/* DEL - backspace */
+			p=delete_char(password_buffer, p, &col, &n, plen);
+			continue;
+
+		default:
+			if (n < buf_len-1) {
+				if (c == '\t') {	/* expand TABs */
+					puts (tab_seq+(col&07));
+					col += 8 - (col&07);
+				} else {
+					++col;		/* echo '*' */
+					putc ('*');
+				}
+				*p++ = c;
+				++n;
+			} else {			/* Buffer full */
+				putc ('\a');
+			}
+		}
+	}
+}
+
+int uboot_password_verify()
+{
+	sha256_context ctx;
+	const int salt_len = strlen(CONFIG_UBOOT_PASSWORD_SALT);
+	char pwd_buffer[UBOOT_PWD_SIZE_MAX];
+	char tmp_buffer[UBOOT_PWD_SIZE_MAX + salt_len];
+	char input_str[65] = {0};
+	u8 hash[32] = {0};
+	char ch[3] = {0};
+	int plen = 0;
+	int i = 0;
+
+	/* read input password */
+	puts ("Please input the password:");
+	memset(pwd_buffer, 0x0, sizeof(pwd_buffer));
+	plen = readpassword(pwd_buffer, UBOOT_PWD_SIZE_MAX);
+	if (plen < 0)
+		run_command("boot", 0);
+
+	/* combine salt and input password */
+	memset(tmp_buffer, 0x0, sizeof(tmp_buffer));
+	strncat(tmp_buffer, pwd_buffer, plen);
+	strncat(tmp_buffer, CONFIG_UBOOT_PASSWORD_SALT, salt_len);
+
+	/* use sha256 to make the combination hash value */
+	sha256_starts(&ctx);
+	sha256_update(&ctx, (u8 *)tmp_buffer, strlen(tmp_buffer));
+	sha256_finish(&ctx, hash);
+
+	for (i=0; i<32; i++) {
+		sprintf(ch, "%02x", hash[i]);
+		strncat(input_str, ch, 2);
+	}
+
+	if (0 == memcmp(CONFIG_UBOOT_PASSWORD_SHA256SUM, input_str, strlen(input_str)))
+		return 0;
+
+	printf("The input password is incorrect!\n");
+	return -1;
+}
+
+#endif /* CONFIG_UBOOT_PASSWORD */
 
 /****************************************************************************/
 

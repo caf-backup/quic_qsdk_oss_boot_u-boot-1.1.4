@@ -181,6 +181,12 @@ void	print_size (ulong, const char *);
 void	main_loop	(void);
 int	run_command	(const char *cmd, int flag);
 int	readline	(const char *const prompt);
+
+#ifdef CONFIG_UBOOT_PASSWORD
+int	readpassword(char* pwd_output, int len);
+int	uboot_password_verify(void);
+#endif
+
 void	init_cmd_timeout(void);
 void	reset_cmd_timeout(void);
 

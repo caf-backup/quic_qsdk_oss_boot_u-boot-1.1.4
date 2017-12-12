@@ -74,15 +74,18 @@ ifeq ($(ETH_CONFIG), _s27)
 OBJS	+= ../common/athr_s27_phy.o
 endif
 
-ifeq ($(SECURITY_BOOT),1)
+ifneq ($(findstring $(SECURITY_BOOT)$(UBOOT_PASSWORD),1),)
 OBJS   +=  ../common/polarssl-mini/bignum.o \
 	   ../common/polarssl-mini/asn1parse.o \
 	   ../common/polarssl-mini/md.o \
 	   ../common/polarssl-mini/sha256.o \
 	   ../common/polarssl-mini/md_wrap.o \
 	   ../common/polarssl-mini/oid.o  \
-	   ../common/polarssl-mini/rsa.o \
-	   ../common/ath_sign_verify.o
+	   ../common/polarssl-mini/rsa.o
+endif
+
+ifeq ($(SECURITY_BOOT),1)
+OBJS   += ../common/ath_sign_verify.o
 endif
 
 SOBJS	= ../common/953x.o ../common/tap-953x.o
