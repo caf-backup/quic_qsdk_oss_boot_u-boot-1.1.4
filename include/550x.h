@@ -3641,12 +3641,12 @@
 #define CPU_PLL_CONFIG_RANGE_VAL            CPU_PLL_CONFIG_RANGE_SET(0)
 #define CPU_PLL_CONFIG_OUT_DIV_VAL1         CPU_PLL_CONFIG_OUTDIV_SET(0)
 #define CPU_PLL_CONFIG_OUT_DIV_VAL2         CPU_PLL_CONFIG_OUTDIV_SET(0)
-#define CPU_PLL_DITHER1_VAL                 CPU_PLL_DITHER1_DITHER_EN_SET(0) | \
+#define CPU_PLL_DITHER1_VAL                 CPU_PLL_DITHER1_DITHER_EN_SET(1) | \
                                             CPU_PLL_DITHER1_NFRAC_MIN_SET(0) | \
-                                            CPU_PLL_DITHER1_NFRAC_STEP_SET(0) | \
-                                            CPU_PLL_DITHER1_UPDATE_COUNT_SET(0x0)
+                                            CPU_PLL_DITHER1_NFRAC_STEP_SET(1) | \
+                                            CPU_PLL_DITHER1_UPDATE_COUNT_SET(0xF)
 
-#define CPU_PLL_DITHER2_VAL                 CPU_PLL_DITHER2_NFRAC_MAX_SET(0x0)
+#define CPU_PLL_DITHER2_VAL                 CPU_PLL_DITHER2_NFRAC_MAX_SET(0x9000)
 
 #define DDR_PLL_CONFIG1_NINT_VAL            DDR_PLL_CONFIG1_NINT_SET(0x1a)
 #define DDR_PLL_CONFIG_REF_DIV_VAL          DDR_PLL_CONFIG_REFDIV_SET(0x1)
