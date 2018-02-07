@@ -2080,7 +2080,7 @@ endif
 ifdef ATH_SPI_CS1_GPIO
 	@echo "#define CONFIG_ATH_SPI_CS1_GPIO $(ATH_SPI_CS1_GPIO)" >>include/config.h
 endif
-ifneq ($(findstring $(SECURITY_BOOT)$(UBOOT_PASSWORD), 1),)
+ifneq ($(findstring 1, $(SECURITY_BOOT)$(UBOOT_PASSWORD)),)
 	@cp -R $(POLARSSL_MINI_DIR) board/atheros/common
 endif
 ifeq ($(SECURITY_BOOT), 1)

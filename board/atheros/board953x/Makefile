@@ -74,7 +74,7 @@ ifeq ($(ETH_CONFIG), _s27)
 OBJS	+= ../common/athr_s27_phy.o
 endif
 
-ifneq ($(findstring $(SECURITY_BOOT)$(UBOOT_PASSWORD),1),)
+ifneq ($(findstring 1, $(SECURITY_BOOT)$(UBOOT_PASSWORD)),)
 OBJS   +=  ../common/polarssl-mini/bignum.o \
 	   ../common/polarssl-mini/asn1parse.o \
 	   ../common/polarssl-mini/md.o \
