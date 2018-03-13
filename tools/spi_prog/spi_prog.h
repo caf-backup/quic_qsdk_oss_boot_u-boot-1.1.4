@@ -38,7 +38,7 @@ typedef unsigned char uint8_t;
 #define AR7100_SPI_SECTOR_SIZE      (1024*64)
 #define AR7100_SPI_PAGE_SIZE        256
 
-#define SPI_CLOCK_DIVIDER	1
+#define SPI_CLOCK_DIVIDER	3
 #define INFO_ADDR	0xa0000010
 #define INFO_STAGE0	0xdeed0000
 #define INFO_STAGE1	0xdeed0001
