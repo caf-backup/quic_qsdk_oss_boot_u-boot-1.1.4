@@ -43,6 +43,13 @@
 } while (0)
 
 
+#define ath_spi_send_addr_4b(__a) do {			\
+	ath_spi_bit_banger(((__a & 0xff000000) >> 24));	\
+	ath_spi_bit_banger(((__a & 0x00ff0000) >> 16));	\
+	ath_spi_bit_banger(((__a & 0x0000ff00) >> 8));	\
+	ath_spi_bit_banger(__a & 0x000000ff);		\
+} while (0)
+
 #define ath_spi_send_addr(__a) do {			\
 	ath_spi_bit_banger(((__a & 0xff0000) >> 16));	\
 	ath_spi_bit_banger(((__a & 0x00ff00) >> 8));	\

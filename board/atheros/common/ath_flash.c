@@ -36,6 +36,14 @@ flash_info_t flash_info[CFG_MAX_FLASH_BANKS];
 /*
  * statics
  */
+struct ath_priv {
+	int addr_width;
+	int erase_opcode;
+	int write_opcode;
+	int read_opcode;
+};
+static struct ath_priv ath_priv;
+
 static void ath_spi_write_enable(void);
 static void ath_spi_poll(void);
 #if !defined(ATH_SST_FLASH)
@@ -209,6 +217,7 @@ int flash_select(int chip)
 
 unsigned long flash_init(void)
 {
+	unsigned long ret;
 #if !(defined(CONFIG_WASP_SUPPORT) || defined(CONFIG_MACH_QCA955x) || defined(CONFIG_MACH_QCA956x) || defined(CONFIG_MACH_QCN550x))
 #ifdef ATH_SST_FLASH
 	ath_reg_wr_nf(ATH_SPI_CLOCK, 0x3);
@@ -237,7 +246,20 @@ unsigned long flash_init(void)
 	/*
 	 * hook into board specific code to fill flash_info
 	 */
-	return (flash_get_geom(&flash_info[0]));
+	ret = flash_get_geom(&flash_info[0]);
+
+	if (flash_info[0].size > ATH_16M_FLASH_SIZE) {
+		ath_priv.addr_width = 4;
+		ath_priv.erase_opcode = ATH_SPI_CMD_SECTOR_ERASE_4B_ADDR;
+		ath_priv.read_opcode = ATH_SPI_CMD_READ_4B_ADDR;
+		ath_priv.write_opcode = ATH_SPI_CMD_PAGE_PROG_4B_ADDR;
+	} else {
+		ath_priv.addr_width = 3;
+		ath_priv.erase_opcode = ATH_SPI_CMD_SECTOR_ERASE;
+		ath_priv.read_opcode = ATH_SPI_CMD_READ;
+		ath_priv.write_opcode = ATH_SPI_CMD_PAGE_PROG;
+	}
+	return ret;
 }
 
 void
@@ -257,6 +279,7 @@ flash_erase(flash_info_t *info, int s_first, int s_last)
 		s_first, s_last, sector_size);
 
 	addr = s_first * sector_size;
+#if defined(ATH_DUAL_NOR)
 	if (addr >= ATH_16M_FLASH_SIZE) {
 		ext = 1;
 		ath_spi_enter_ext_addr(ATH_GET_EXT_4B(addr));
@@ -264,7 +287,7 @@ flash_erase(flash_info_t *info, int s_first, int s_last)
 		printf("Erase failed, cross 16M is forbidden\n");
 		return -1;
 	}
-
+#endif
 	for (i = s_first; i <= s_last; i++) {
 		addr = i * sector_size;
 
@@ -308,7 +331,7 @@ write_buff(flash_info_t *info, uchar *src, ulong dst, ulong len)
 
 	for (; len; len--, dst++, src++) {
 		ath_spi_write_enable();	// dont move this above 'for'
-		ath_spi_bit_banger(ATH_SPI_CMD_PAGE_PROG);
+		ath_spi_bit_banger(ath_priv.write_opcode);
 		ath_spi_send_addr(dst);
 
 		val = *src & 0xff;
@@ -341,7 +364,7 @@ write_buff(flash_info_t *info, uchar *source, ulong addr, ulong len)
 
 	printf("write addr: %x\n", addr);
 	addr = addr - CFG_FLASH_BASE;
-
+#if defined(ATH_DUAL_NOR)
 	if (addr >= ATH_16M_FLASH_SIZE) {
 		ext = 1;
 		ath_spi_enter_ext_addr(ATH_GET_EXT_4B(addr));
@@ -350,7 +373,7 @@ write_buff(flash_info_t *info, uchar *source, ulong addr, ulong len)
 		printf("Write failed, cross 16M is forbidden\n");
 		return -1;
 	}
-
+#endif
 	while (total < len) {
 		src = source + total;
 		dst = addr + total;
@@ -370,6 +393,32 @@ write_buff(flash_info_t *info, uchar *source, ulong addr, ulong len)
 	return 0;
 }
 #endif
+
+int
+read_buff(flash_info_t *info, uchar *buf, ulong offset, ulong len)
+{
+	ulong    i = 0;
+	uint32_t curr_addr = offset - CFG_FLASH_BASE;
+
+	while (i < len) {
+		ath_spi_write_enable();
+		ath_spi_bit_banger(ath_priv.read_opcode);
+		if (ath_priv.addr_width == 3)
+			ath_spi_send_addr(curr_addr);
+		else
+			ath_spi_send_addr_4b(curr_addr);
+		do{
+			ath_spi_delay_8();
+			*(buf + i++) = (uchar)(ath_reg_rd(ATH_SPI_RD_STATUS));
+			if(!((++ curr_addr) & (ATH_16M_FLASH_SIZE - 1))) {
+				break;
+			}
+		}while(i < len);
+		ath_spi_go();
+	}
+	ath_spi_done();
+	return 0;
+}
 
 static void
 ath_spi_write_enable()
@@ -402,8 +451,11 @@ ath_spi_write_page(uint32_t addr, uint8_t *data, int len)
 
 	display(0x77);
 	ath_spi_write_enable();
-	ath_spi_bit_banger(ATH_SPI_CMD_PAGE_PROG);
-	ath_spi_send_addr(addr);
+	ath_spi_bit_banger(ath_priv.write_opcode);
+	if (ath_priv.addr_width == 3)
+		ath_spi_send_addr(addr);
+	else
+		ath_spi_send_addr_4b(addr);
 
 	for (i = 0; i < len; i++) {
 		ch = *(data + i);
@@ -421,8 +473,11 @@ static void
 ath_spi_sector_erase(uint32_t addr)
 {
 	ath_spi_write_enable();
-	ath_spi_bit_banger(ATH_SPI_CMD_SECTOR_ERASE);
-	ath_spi_send_addr(addr);
+	ath_spi_bit_banger(ath_priv.erase_opcode);
+	if (ath_priv.addr_width == 3)
+		ath_spi_send_addr(addr);
+	else
+		ath_spi_send_addr_4b(addr);
 	ath_spi_go();
 	display(0x7d);
 	ath_spi_poll();

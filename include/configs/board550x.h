@@ -32,7 +32,10 @@
  * FLASH and environment organization
  */
 #define CFG_MAX_FLASH_BANKS	1	/* max number of memory banks */
-#if (FLASH_SIZE == 16)
+#if (FLASH_SIZE == 32)
+#define CFG_MAX_FLASH_SECT	512	/* max number of sectors on one chip */
+#define ATH_MTDPARTS_MIB0	"64k(mib0)"
+#elif (FLASH_SIZE == 16)
 #define CFG_MAX_FLASH_SECT	256	/* max number of sectors on one chip */
 #define ATH_MTDPARTS_MIB0	"64k(mib0)"
 #elif (FLASH_SIZE == 8)
@@ -49,7 +52,9 @@
 #endif
 
 #define CFG_FLASH_SECTOR_SIZE	(64*1024)
-#if (FLASH_SIZE == 16)
+#if (FLASH_SIZE == 32)
+#define CFG_FLASH_SIZE		0x02000000	/* Total flash size */
+#elif (FLASH_SIZE == 16)
 #define CFG_FLASH_SIZE		0x01000000	/* Total flash size */
 #elif (FLASH_SIZE == 8)
 #define CFG_FLASH_SIZE		0x00800000	/* max number of sectors on one chip */
@@ -202,7 +207,14 @@
 		 */
 #		define MTDPARTS_DEFAULT	"mtdparts=ath-nor0:32k(u-boot1),32k(u-boot2),3008k(rootfs),896k(uImage),64k(mib0),64k(ART)"
 #	else
-#if (FLASH_SIZE == 16) /*FLASH SIZE */
+#if (FLASH_SIZE == 32) /*FLASH SIZE */
+#	define ATH_F_FILE		fs_name(${bc}-jffs2)
+#	define ATH_F_LEN		$filesize
+#	define ATH_F_ADDR		0x9f050000
+#	define ATH_K_FILE		vmlinux${bc}.lzma.uImage
+#	define ATH_K_ADDR		0x9fe80000
+#	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),14528k(rootfs),1408k(uImage),64k(mib0),64k(ART)"
+#elif (FLASH_SIZE == 16) /*FLASH SIZE */
 #	define ATH_F_FILE		fs_name(${bc}-jffs2)
 #	define ATH_F_LEN		0xE30000
 #	define ATH_F_ADDR		0x9f050000
