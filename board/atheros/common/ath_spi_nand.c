@@ -1425,6 +1425,13 @@ static struct ath_spi_nand_priv ath_spi_nand_ids[] = {
 		(256 << 20),			/* 2G bit */
 		128,				/* oob size */
 	},
+	{ /* Giga Device version 1 - GD5F1GQ4UAYIG */
+		0xc8,				/* manufacturer code */
+		{ 0xd1, 0x00, 0x00, 0x00 },	/* Device id */
+		0x02,				/* ecc error code */
+		(128 << 20),			/* 1G bit */
+		128,				/* oob size */
+	},
 	{ /* Macronix - MX35LF1GE4AB */
 		0xc2,				/* manufacturer code */
 		{ 0x12, 0x00, 0x00, 0x00 },	/* Device id */
@@ -1496,7 +1503,11 @@ done:
 			priv->ecc_layout = &ath_spi_nand_oob_64_gd;
 			priv->ecc_status = ath_spi_nand_eccsr_common;
 			priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
-		} else {
+		}else if (priv->did[0] == 0xd1) {
+			priv->ecc_layout = &ath_spi_nand_oob_128_gd;
+			priv->ecc_status = ath_spi_nand_eccsr_common;
+			priv->read_rdm_addr = ath_spi_read_rdm_addr_commom;
+		}else {
 			priv->ecc_layout = &ath_spi_nand_oob_128_gd;
 			priv->ecc_status = ath_spi_nand_eccsr_gd;
 			priv->read_rdm_addr = ath_spi_read_rdm_addr_gd;
