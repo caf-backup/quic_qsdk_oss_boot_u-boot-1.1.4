@@ -60,4 +60,13 @@ static inline int nand_erase(nand_info_t *info, ulong off, ulong size)
 	return info->erase(info, &instr);
 }
 
+static inline int nand_read_block(nand_info_t *info, loff_t ofs, u_char *buf)
+{
+	size_t len = info->erasesize;
+
+	if (nand_block_isbad(info, ofs))
+		return -1;
+
+	return info->read(info, ofs, len, &len, buf);
+}
 #endif

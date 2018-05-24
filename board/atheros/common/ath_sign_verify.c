@@ -142,7 +142,7 @@ static int rootfs_sign_verify_ubifs(u32 k_addr, u32 k_offset, u8 *r_sign)
 	sha256_context ctx;
 	u32 r_mask, r_len, r_offset, r_blocks, i_blocks;
 	u8 hash[32], *block_buf = (u8 *)(k_addr + ATH_K_LEN);
-	u32 ubi_data_offset, block_data_size, block_size = 0x20000;
+	u32 ubi_data_offset, block_data_size, block_size;
 	int image_found = 0;
 	u8 eof[4] = { 0xde, 0xad, 0xc0, 0xde };
 	nand_info_t *nand = &nand_info[0];
@@ -150,6 +150,8 @@ static int rootfs_sign_verify_ubifs(u32 k_addr, u32 k_offset, u8 *r_sign)
 
 	/* KRImage only */
 	r_offset = k_offset + ATH_K_LEN;
+
+	block_size = nand->erasesize;
 
 	if (nand_read(nand, r_offset, &block_size, block_buf) < 0) {
 		printf("nand read heaher failed!\n");
@@ -171,7 +173,7 @@ static int rootfs_sign_verify_ubifs(u32 k_addr, u32 k_offset, u8 *r_sign)
 		u8 *data = block_buf + ubi_data_offset;
 
 		/* read one block */
-		if (nand_read(nand, r_offset + i_blocks * block_size, &block_size, block_buf) < 0)
+		if (nand_read_block(nand, r_offset + i_blocks * block_size, block_buf) < 0)
 			continue;
 
 		if (!image_found) {
