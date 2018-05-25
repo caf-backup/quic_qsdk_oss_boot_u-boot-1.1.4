@@ -85,6 +85,9 @@ ifeq ($(ETH_CONFIG2), _ar8033)
 OBJS	+= ../common/athr_ar8033_phy.o
 endif
 
+ifeq ($(FLASH_SIZE), 32)
+OBJS	+= ./cmd_bootqca.o
+endif
 
 SOBJS	= ../common/550x.o ../common/tap-550x.o
 
