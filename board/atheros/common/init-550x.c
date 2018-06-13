@@ -163,7 +163,7 @@ ath_ram_type(uint32_t bs)
 #define CFG_DDR2_MODE_VAL_INIT          0xb53
 #define CFG_DDR2_MODE_VAL               0xa53
 #define CFG_DDR2_TAP_VAL                0x10
-#define CFG_DDR2_EN_TWL_VAL             0x00001e91
+#define CFG_DDR2_EN_TWL_VAL             0x00001e81
 #define CFG_DDR2_RD_DATA_THIS_CYCLE_VAL_16	0xffff
 #define CFG_DDR2_RD_DATA_THIS_CYCLE_VAL_32	0xff
 
