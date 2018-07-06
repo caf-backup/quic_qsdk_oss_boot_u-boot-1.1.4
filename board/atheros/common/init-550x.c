@@ -150,18 +150,18 @@ ath_ram_type(uint32_t bs)
 						DDR_CONFIG2_GATE_OPEN_LATENCY_SET(0xa) | \
 						DDR_CONFIG2_TWTR_SET(0x16) | \
 						DDR_CONFIG2_TRTP_SET(0xa) | \
-						DDR_CONFIG2_TRTW_SET(0xe) | \
-						DDR_CONFIG2_TWR_SET(0x2) | \
+						DDR_CONFIG2_TRTW_SET(0xc) | \
+						DDR_CONFIG2_TWR_SET(0xb) | \
 						DDR_CONFIG2_CKE_SET(0x1) | \
 						DDR_CONFIG2_CNTL_OE_EN_SET(0x1) | \
 						DDR_CONFIG2_BURST_LENGTH_SET(0x8)
 
 
-#define CFG_DDR2_CONFIG3_VAL            0x0000000e
+#define CFG_DDR2_CONFIG3_VAL            0x00000006
 #define CFG_DDR2_EXT_MODE_VAL1			0x782
 #define CFG_DDR2_EXT_MODE_VAL2          0x402
-#define CFG_DDR2_MODE_VAL_INIT          0xb53
-#define CFG_DDR2_MODE_VAL               0xa53
+#define CFG_DDR2_MODE_VAL_INIT          0x953
+#define CFG_DDR2_MODE_VAL               0x853
 #define CFG_DDR2_TAP_VAL                0x10
 #define CFG_DDR2_EN_TWL_VAL             0x00001e81
 #define CFG_DDR2_RD_DATA_THIS_CYCLE_VAL_16	0xffff
