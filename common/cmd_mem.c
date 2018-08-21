@@ -42,7 +42,6 @@
 			CFG_CMD_ITEST	| \
 			CFG_CMD_PCI	| \
 			CMD_CMD_PORTIO	) )
-#define FLASH_16M_SIZE	0x1000000
 int cmd_get_data_size(char* arg, int default_size)
 {
 	/* Check for a size specification .b, .w or .l.
@@ -167,23 +166,6 @@ int do_mem_md ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 		} else {	/* addr does not correspond to DataFlash */
 #endif
-#if !defined(CFG_NO_FLASH) && !defined(CONFIG_ATH_NAND_BR) && (FLASH_SIZE == 32)
-		if ((addr + length) >= (CFG_FLASH_BASE + FLASH_16M_SIZE)) {
-			flash_info_t *info;
-			info = addr2info(addr);
-			read_buff(info, linebuf, addr, linebytes);
-			for (i=0; i<linebytes; i+= size) {
-				if (size == 4) {
-					printf(" %08x", *uip++);
-				} else if (size == 2) {
-					printf(" %04x", *usp++);
-				} else {
-					printf(" %02x", *ucp++);
-				}
-				addr += size;
-			}
-		} else {
-#endif
 		for (i=0; i<linebytes; i+= size) {
 			if (size == 4) {
 				printf(" %08x", (*uip++ = *((uint *)addr)));
@@ -194,9 +176,6 @@ int do_mem_md ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			}
 			addr += size;
 		}
-#if !defined(CFG_NO_FLASH) && !defined(CONFIG_ATH_NAND_BR) && (FLASH_SIZE == 32)
-		}
-#endif
 #ifdef CONFIG_HAS_DATAFLASH
 		}
 #endif

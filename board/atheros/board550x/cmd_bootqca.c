@@ -20,6 +20,8 @@
 #define FLASH_SIZE_32M		0x2000000
 #define FLASH_SIZE_16M		0x1000000
 
+extern flash_info_t flash_info[];	/* info for FLASH chips */
+
 int do_bootqca(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	flash_info_t *info;
@@ -53,6 +55,36 @@ int do_bootqca(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	return 0;
 }
 
+int do_read_flash(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+	flash_info_t *info;
+	ulong buf;
+	ulong offset;
+	ulong len;
+
+	if (argc < 4) {
+		printf ("Usage:\n%s\n%s\n", cmdtp->usage, cmdtp->help);
+		return 1;
+	}
+
+	buf = simple_strtoul(argv[1], NULL, 16);
+	offset = simple_strtoul(argv[2], NULL, 16);
+	len = simple_strtoul(argv[3], NULL, 16);
+
+	info = &flash_info[0];
+	printf("### buf:0x%X, offset:0x%X, len:0x%X\n", buf, offset, len);
+	if ((offset + len) > (CFG_FLASH_BASE + FLASH_SIZE_32M)) {
+		printf ("Bad parameters, 'offset' + 'len' should <= 0x%x\n",
+			(CFG_FLASH_BASE + info->size));
+		return 1;
+	} else if (offset < CFG_FLASH_BASE) {
+		printf("Bad parameter, 'offset' should >= 0x%x\n", CFG_FLASH_BASE);
+		return 1;
+	}
+
+	return(read_buff(info, (uchar *)buf, offset, len));
+}
+
 U_BOOT_CMD(
 	bootqca,    3,    1,    do_bootqca,
 	"bootqca - boot the kernel\n",
@@ -61,5 +93,12 @@ U_BOOT_CMD(
 "If the given address greater than 16MB, SPI driver will read the\n"
 "data from flash into DDR and boot from loaded DDR address.\n"
 "    - bootqca\n"
+);
+
+U_BOOT_CMD(
+	read_flash,   5,   1,  do_read_flash,
+	"read_flash   - read SPI NOR FLASH memory(0-32M space)\n",
+	"read_flash dst offset(offset of the flash) len\n"
+	"    - read 'len' bytes from FLASH addr 'start' to memory addr 'dst'\n"
 );
 #endif
