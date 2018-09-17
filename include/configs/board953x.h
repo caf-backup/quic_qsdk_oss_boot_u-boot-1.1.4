@@ -244,9 +244,9 @@
 #				define MTDPARTS_DEFAULT	"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env)," ATH_ROOTFS_SIZE ",1472k(uImage)," "64k(ART),256k(reserved),16128k(usr)"
 #			else
 #				if defined(CONFIG_AP147IOE)
-#					define ATH_F_LEN		0x00e10000
-#					define ATH_K_ADDR		0x9fE60000
-#					define MTDPARTS_DEFAULT	"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),14400k(rootfs),1600k(uImage),64k(ART),16000k@0x50000(firmware)"
+#					define ATH_F_LEN		0x00df0000
+#					define ATH_K_ADDR		0x9fE40000
+#					define MTDPARTS_DEFAULT	"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),14272k(rootfs),1728k(uImage),64k(ART),16000k@0x50000(firmware)"
 #				else
 #					define MTDPARTS_DEFAULT	"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env)," ATH_ROOTFS_SIZE ",1408k(uImage)," ATH_MTDPARTS_MIB0 ",64k(ART)"
 #				endif
@@ -314,7 +314,7 @@
 #	else
 #		if (FLASH_SIZE == 16 || FLASH_SIZE == 32)
 #			if defined(CONFIG_AP147IOE)
-#				define CONFIG_BOOTCOMMAND	"bootm 0x9fE60000"
+#				define CONFIG_BOOTCOMMAND	"bootm 0x9fE40000"
 #			else
 #				define CONFIG_BOOTCOMMAND	"bootm 0x9fE80000"
 #			endif
