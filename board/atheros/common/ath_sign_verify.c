@@ -202,6 +202,9 @@ static int rootfs_sign_verify_ubifs(u32 k_addr, u32 k_offset, u8 *r_sign)
 				sha256_update(&ctx, data, r_len);
 				break;
 			}
+
+			if (r_len == 0)
+				break;
 		}
 	}
 
