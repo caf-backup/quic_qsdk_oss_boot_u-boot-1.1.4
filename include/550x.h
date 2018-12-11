@@ -3565,9 +3565,20 @@
 #define ATH_SPI_CS_ENABLE_1 (5<<16) /* Pin gpio/cs1 (active low) */
 #define ATH_SPI_CS_ENABLE_2 (3<<16) /* Pin gpio/cs2 (active low) */
 #define ATH_SPI_CS_DIS      0x70000
-#define ATH_SPI_CE_LOW      0x60000
-#define ATH_SPI_CE_HIGH     0x60100
-
+#if defined(ATH_DUAL_SPI_NOR_FLASH)
+/*
+ * In SPI_IO_CONTROL_ADDR(0x1F000008) register, bits 16,17,18 are
+ * three different chip select and all are active low. So we are
+ * setting all device are disable by default. Chip select will be
+ * active based on the @ath_spi_cs value. The @ath_spi_cs value will
+ * update in function flash_select which used to switch flash device.
+ */
+#define ATH_SPI_CE_LOW (0x70000 & (~(1 << ath_spi_cs)))
+#define ATH_SPI_CE_HIGH (0x70100 & (~(1 << ath_spi_cs)))
+#else
+#define ATH_SPI_CE_LOW 0x60000
+#define ATH_SPI_CE_HIGH 0x60100
+#endif
 #define ATH_SPI_SECTOR_SIZE (1024*64)
 #define ATH_SPI_PAGE_SIZE   256
 

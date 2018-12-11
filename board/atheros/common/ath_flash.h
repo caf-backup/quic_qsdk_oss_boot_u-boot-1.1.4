@@ -59,6 +59,14 @@
 #define ath_spi_delay_8()	ath_spi_bit_banger(0)
 #define ath_spi_done()		ath_reg_wr_nf(ATH_SPI_FS, 0)
 
+#if  defined(ATH_DUAL_SPI_NOR_FLASH)
+#define ATH_SPI_IO_CS0 16
+#define ATH_SPI_IO_CS1 17
+
+/* SPI_IO_CONTROL_ADDR(0x1F000008): Bit 16: IO_CS0: Chip select 0. Active low signal */
+unsigned int ath_spi_cs = ATH_SPI_IO_CS0;
+#endif
+
 extern unsigned long flash_get_geom (flash_info_t *flash_info);
 
 #endif /* _ATH_FLASH_H */
