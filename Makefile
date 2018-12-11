@@ -3352,6 +3352,10 @@ board550x_config: unconfig
 	@echo '#define CONFIG_'`echo $(CFG_BOARD_TYPE) | tr [a-z] [A-Z] | sed s/-/_/g`'	1' >>include/config.h
 	@echo '#define __CONFIG_BOARD_NAME $(CFG_BOARD_TYPE)' >>include/config.h
 	@echo '#define CONFIG_BOARD_NAME "$(CFG_BOARD_TYPE)"' >>include/config.h
+ifdef ATH_SPI_NOR_CS1_GPIO
+	@echo "#define CONFIG_ATH_SPI_CS1_GPIO $(ATH_SPI_NOR_CS1_GPIO)" >>include/config.h
+	@echo "#define ATH_DUAL_SPI_NOR_FLASH 1" >> include/config.h
+endif
 ifdef pll
 	@echo '#define CFG_PLL_FREQ		$(pll)'	>>include/config.h
 else

@@ -742,7 +742,7 @@ U_BOOT_CMD(
 	"erase all\n    - erase all FLASH banks\n"
 );
 
-#if defined(CONFIG_ATH_SPI_CS1_GPIO) || defined(ATH_DUAL_NOR)
+#if defined(CONFIG_ATH_SPI_CS1_GPIO) || defined(ATH_DUAL_NOR) || defined(ATH_DUAL_SPI_NOR_FLASH)
 int do_flselect (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	if (argc < 2)
@@ -753,10 +753,47 @@ int do_flselect (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	return 0;
 }
 
+int do_flread(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+	flash_info_t *info;
+	ulong buf, offset, len;
+	int   bank = 1;
+	if (argc < 4) {
+		printf ("Usage:\n%s\n%s\n", cmdtp->usage, cmdtp->help);
+		return 1;
+	}
+	buf = simple_strtoul(argv[1], NULL, 16);
+	offset = simple_strtoul(argv[2], NULL, 16);
+	len = simple_strtoul(argv[3], NULL, 16);
+	if (argc > 4) {
+		bank = simple_strtoul(argv[4], NULL, 16);
+		if ((bank < 1) || (bank > CFG_MAX_FLASH_BANKS)) {
+			printf ("Only FLASH Banks # 1 ... # %d supported\n",
+					CFG_MAX_FLASH_BANKS);
+			return 1;
+		}
+	}
+	info = &flash_info[bank - 1];
+	printf("### buf:0x%X, offset:0x%X, len:0x%X, bank:0x%X\n",
+			buf, offset, len, bank);
+	if ((offset + len) > info->size){
+		printf ("Bad parameters, 'offset' + 'len' should < 0x%x\n", info->size);
+		return 1;
+	}
+	return(read_buff(info, (uchar *)buf, offset, len));
+}
+
 U_BOOT_CMD(
 	flselect,	2,	1,	do_flselect,
 	"\n",
 );
+U_BOOT_CMD(
+		flread,   5,   1,  do_flread,
+		"flread   - read SPI NOR FLASH memory(0-16M space)\n",
+		"flread dst offset(offset of the flash) len [N]\n"
+		"    - read 'len' bytes from FLASH bank #N addr 'start' to memory addr 'dst'\n"
+		"    - 'N' is optional, default the first bank\n"
+		);
 #endif
 
 #undef	TMP_ERASE

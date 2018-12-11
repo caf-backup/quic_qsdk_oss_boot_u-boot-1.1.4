@@ -102,7 +102,7 @@ void ath_spi_flash_unblock(void)
 }
 #endif
 
-#if  defined(CONFIG_ATH_SPI_CS1_GPIO)
+#if  defined(CONFIG_ATH_SPI_CS1_GPIO) || defined(ATH_DUAL_SPI_NOR_FLASH)
 
 #define ATH_SPI_CS0_GPIO		5
 
@@ -149,6 +149,8 @@ int ath_spi_flash_get_fn_cs1(void)
 	return 0x07;
 #elif (CONFIG_MACH_QCA953x || CONFIG_MACH_QCA955x)
 	return 0x0a;
+#elif CONFIG_MACH_QCN550x
+	return 0x25;
 #endif
 	return -1;
 }
@@ -172,7 +174,7 @@ void ath_spi_flash_enable_cs1(void)
 
 int flash_select(int chip)
 {
-#if  defined(CONFIG_ATH_SPI_CS1_GPIO)
+#if  (defined(CONFIG_ATH_SPI_CS1_GPIO) && !(defined(ATH_DUAL_SPI_NOR_FLASH)))
 	int fn_cs0, fn_cs1;
 
 	fn_cs0 = ath_spi_flash_get_fn_cs0();
@@ -186,7 +188,12 @@ int flash_select(int chip)
 
 	switch (chip) {
 	case 0:
-#if  defined(CONFIG_ATH_SPI_CS1_GPIO)
+#if defined(ATH_DUAL_SPI_NOR_FLASH)
+		ath_spi_cs = ATH_SPI_IO_CS0;
+		ath_reg_rmw_set(ATH_SPI_FS, 1);
+		ath_spi_read_id();
+		ath_reg_rmw_clear(ATH_SPI_FS, 1);
+#elif  defined(CONFIG_ATH_SPI_CS1_GPIO)
 		ath_gpio_set_fn(CONFIG_ATH_SPI_CS1_GPIO, fn_cs1);
 		ath_gpio_set_fn(ATH_SPI_CS0_GPIO, fn_cs0);
 #elif defined(ATH_DUAL_NOR)
@@ -197,7 +204,12 @@ int flash_select(int chip)
 		break;
 
 	case 1:
-#if  defined(CONFIG_ATH_SPI_CS1_GPIO)
+#if defined(ATH_DUAL_SPI_NOR_FLASH)
+		ath_spi_cs = ATH_SPI_IO_CS1;
+		ath_reg_rmw_set(ATH_SPI_FS, 1);
+		ath_spi_read_id();
+		ath_reg_rmw_clear(ATH_SPI_FS, 1);
+#elif  defined(CONFIG_ATH_SPI_CS1_GPIO)
 		ath_gpio_set_fn(ATH_SPI_CS0_GPIO, 0);
 		ath_gpio_set_fn(CONFIG_ATH_SPI_CS1_GPIO, fn_cs0);
 #elif defined(ATH_DUAL_NOR)
@@ -242,7 +254,11 @@ unsigned long flash_init(void)
 	ath_spi_exit_ext_addr(1);
 	ath_reg_rmw_clear(ATH_SPI_FS, 1);
 
+#if defined(ATH_DUAL_SPI_NOR_FLASH)
+	ath_reg_rmw_set(ATH_SPI_FS, 1);
 	ath_spi_flash_enable_cs1();
+	ath_reg_rmw_clear(ATH_SPI_FS, 1);
+#endif
 	/*
 	 * hook into board specific code to fill flash_info
 	 */
